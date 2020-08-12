@@ -1,0 +1,74 @@
+#!/usr/bin/python
+import json
+import uuid
+import pika
+import random
+
+# RabbitMQ
+node1 = pika.URLParameters('amqp://user:password@192.168.5.11/')
+node2 = pika.URLParameters('amqp://user:password@192.168.5.12/')
+node3 = pika.URLParameters('amqp://user:password@192.168.5.13/')
+all_endpoints = [node1, node2, node3]
+
+#
+# MAIN
+#
+
+def recv_callback(ch, method, properties, body):
+    #print ("Got Request:" + body)
+    request = json.loads(body)
+
+    channel.queue_delete(reply_name)
+    channel.exchange_delete(reply_name)
+    
+    #json_string = json.dumps(data)
+    #channel.basic_publish(exchange=rabbitmq_exchange,
+    #             routing_key=reply_fqdn,
+    #             body=json_string)
+    #print(" [x] Sent " + json_string + " to " + reply_fqdn)
+
+
+while True:
+    try:
+        random.shuffle(all_endpoints)
+        # RabbitMQ Connection
+        connection = pika.BlockingConnection(all_endpoints[0])
+
+        channel = connection.channel()
+        rabbitmq_exchange = 'rpc_flood'
+
+        while True:
+
+            reply_uuid = uuid.uuid4()
+
+            reply_name = 'rpc_flood_reply_' + str(reply_uuid)
+            # declare exchange
+            channel.exchange_declare(exchange=reply_name, exchange_type='direct', auto_delete=True)
+
+            # declare queue
+            result = channel.queue_declare(reply_name)
+
+            # bind routing-key <-> queue (use queue_name as routing_key)
+            channel.queue_bind(exchange=reply_name, queue=reply_name, routing_key=reply_name)
+
+            # send msg to control - it should answer to my routing key set
+            data = { 'routing_key': reply_name }
+            json_string = json.dumps(data)
+
+            channel.basic_consume(recv_callback, queue=reply_name, no_ack=True)
+
+            channel.basic_publish(exchange=rabbitmq_exchange, routing_key='control', body=json_string)
+            #print("Send %s data to %s exchange" % (json_string, rabbitmq_exchange))
+
+            #print(' [*] Waiting for messages. To exit press CTRL+C')
+            channel.start_consuming()
+
+    # Do not recover on channel errors
+    except pika.exceptions.AMQPChannelError as err:
+        print("Caught a channel error: {}, stopping...".format(err))
+        break
+    # Recover on all other connection errors
+    except pika.exceptions.AMQPConnectionError:
+        print("Connection was closed, retrying...")
+        continue
+

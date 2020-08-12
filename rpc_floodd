@@ -1,0 +1,63 @@
+#!/usr/bin/python
+import json
+import pika
+import random
+
+rabbitmq_exchange = "rpc_flood"
+node1 = pika.URLParameters('amqp://user:password@192.168.5.11/')
+node2 = pika.URLParameters('amqp://user:password@192.168.5.12/')
+node3 = pika.URLParameters('amqp://user:password@192.168.5.13/')
+all_endpoints = [node1, node2, node3]
+
+#
+# MAIN
+#
+
+def recv_callback(ch, method, properties, body):
+    print ("Got Request:" + body)
+    try: 
+        request = json.loads(body)
+        reply_key = request['routing_key']
+        data = { 'msg': 'have a nice day' }
+        json_string = json.dumps(data)
+        channel.basic_publish(exchange=reply_key,
+                  routing_key=reply_key,
+                  body=json_string)
+        print(" [x] Sent " + json_string + " to exchange " + reply_key)
+    except Exception as e:
+        print("ERR - %s" % e)
+
+while True:
+    try:
+        random.shuffle(all_endpoints)
+        # RabbitMQ Connection
+        connection = pika.BlockingConnection(all_endpoints[0])
+
+        channel = connection.channel()
+        channel.exchange_declare(exchange=rabbitmq_exchange, exchange_type='topic')
+        result = channel.queue_declare(rabbitmq_exchange + '_control')
+        queue_name = result.method.queue
+        channel.queue_bind(exchange=rabbitmq_exchange, queue=queue_name, routing_key='control')
+
+        channel.basic_consume(recv_callback, queue=queue_name, no_ack=True)
+        print(' [*] Waiting for messages. To exit press CTRL+C')
+        channel.start_consuming()
+
+
+#    except pika.exceptions.ConnectionClosedByBroker:
+#        # Uncomment this to make the example not attempt recovery
+#        # from server-initiated connection closure, including
+#        # when the node is stopped cleanly
+#        #
+#        # break
+#        continue
+    # Do not recover on channel errors
+    except pika.exceptions.AMQPChannelError as err:
+        print("Caught a channel error: {}, stopping...".format(err))
+        break
+    # Recover on all other connection errors
+    except pika.exceptions.AMQPConnectionError:
+        print("Connection was closed, retrying...")
+        continue
+
+
