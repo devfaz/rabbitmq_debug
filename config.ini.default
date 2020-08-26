@@ -1,0 +1,5 @@
+[check_unroutable]
+base = http://localhost:15672
+vhost = /
+username = admin
+password = administrator
