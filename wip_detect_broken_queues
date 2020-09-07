@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -7,8 +7,8 @@ import pprint
 import pika
 import sys
 
-url = 'http://localhost:15672/api/queues'
-response = requests.get(url, auth=HTTPBasicAuth('admin', 'SECURE'))
+url = 'http://node1:15672/api/queues'
+response = requests.get(url, auth=HTTPBasicAuth('admin', 'administrator'))
 workdata = {}
 if(response.ok):
         data = response.json()

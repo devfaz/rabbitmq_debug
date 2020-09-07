@@ -1,13 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 import json
 import uuid
 import pika
 import random
 
 # RabbitMQ
-node1 = pika.URLParameters('amqp://user:password@192.168.5.11/')
-node2 = pika.URLParameters('amqp://user:password@192.168.5.12/')
-node3 = pika.URLParameters('amqp://user:password@192.168.5.13/')
+node1 = pika.URLParameters('amqp://user:password@node1/')
+node2 = pika.URLParameters('amqp://user:password@node2/')
+node3 = pika.URLParameters('amqp://user:password@node3/')
 all_endpoints = [node1, node2, node3]
 
 #
@@ -55,7 +55,7 @@ while True:
             data = { 'routing_key': reply_name }
             json_string = json.dumps(data)
 
-            channel.basic_consume(recv_callback, queue=reply_name, no_ack=True)
+            channel.basic_consume(reply_name, recv_callback, auto_ack=True)
 
             channel.basic_publish(exchange=rabbitmq_exchange, routing_key='control', body=json_string)
             #print("Send %s data to %s exchange" % (json_string, rabbitmq_exchange))

@@ -1,4 +1,17 @@
 
+# ./run
+
+will just 
+
+* start some docker containers
+* build a cluster
+* configure users
+* generate some load
+* kill a node (container)
+* check if broken queues exist
+
+created to allow rabbitmq list to (hopefully) debug the issue.
+
 # check_rabbitmq_unroutable_msg
 
 to use check_rabbitmq_unroutable_msg

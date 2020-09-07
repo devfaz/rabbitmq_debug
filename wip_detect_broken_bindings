@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import requests
 import re
@@ -8,7 +8,8 @@ import pprint
 import sys
 from urllib.parse import quote
 
-url = 'http://localhost:15672/api/bindings'
+host = "node1"
+url = 'http://' + host + ':15672/api/bindings'
 basic_auth = HTTPBasicAuth('admin', 'administrator')
 response = requests.get(url, auth=basic_auth)
 response.raise_for_status()
@@ -22,13 +23,13 @@ if(response.ok):
             exchange = entry['source']
             routing_key = entry['routing_key']
             destination = entry['destination']
-            if exchange is '':
+            if exchange == '':
                 continue
 
             if re.match('^amq.gen', destination):
                 continue
 
-            url = 'http://localhost:15672/api/exchanges/' + quote(vhost, safe='') + '/' + exchange + '/publish'
+            url = 'http://' + host + ':15672/api/exchanges/' + quote(vhost, safe='') + '/' + exchange + '/publish'
             data = '{"vhost":"' + vhost + '","name":"' + exchange + '","properties":{"delivery_mode":2,"headers":{}},"routing_key":"' + routing_key + '","delivery_mode":"2","payload":"test","headers":{},"props":{},"payload_encoding":"string"}'
             r = response = requests.post(url, auth=basic_auth, data=data)
             try:

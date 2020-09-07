@@ -1,12 +1,12 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 import json
 import pika
 import random
 
 rabbitmq_exchange = "rpc_flood"
-node1 = pika.URLParameters('amqp://user:password@192.168.5.11/')
-node2 = pika.URLParameters('amqp://user:password@192.168.5.12/')
-node3 = pika.URLParameters('amqp://user:password@192.168.5.13/')
+node1 = pika.URLParameters('amqp://user:password@node1/')
+node2 = pika.URLParameters('amqp://user:password@node2/')
+node3 = pika.URLParameters('amqp://user:password@node3/')
 all_endpoints = [node1, node2, node3]
 
 #
@@ -14,7 +14,7 @@ all_endpoints = [node1, node2, node3]
 #
 
 def recv_callback(ch, method, properties, body):
-    print ("Got Request:" + body)
+    print ("Got Request:" + str(body))
     try: 
         request = json.loads(body)
         reply_key = request['routing_key']
@@ -37,9 +37,10 @@ while True:
         channel.exchange_declare(exchange=rabbitmq_exchange, exchange_type='topic')
         result = channel.queue_declare(rabbitmq_exchange + '_control')
         queue_name = result.method.queue
+        print(queue_name)
         channel.queue_bind(exchange=rabbitmq_exchange, queue=queue_name, routing_key='control')
 
-        channel.basic_consume(recv_callback, queue=queue_name, no_ack=True)
+        channel.basic_consume(queue_name, recv_callback, auto_ack=True)
         print(' [*] Waiting for messages. To exit press CTRL+C')
         channel.start_consuming()
 
